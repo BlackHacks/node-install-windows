@@ -4,6 +4,8 @@ using System.Text;
 using System.Net;
 using System.ComponentModel;
 using System.Threading;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace node_install_windows
 {
@@ -11,15 +13,18 @@ namespace node_install_windows
     {
         static void Main(string[] args)
         {
-            Console.Write("Downloading NodeJS...");
-            Console.WriteLine();
-            
-            getNode("0.8.16");
+            Console.Write("Downloading NodeJS...");            
+            getNode();
         }
         
-        private static void getNode(string version, string architecture="")
+        /* Downloads nodeJS*/
+        private static void getNode(string version=null, string architecture=null)
         {
-            architecture = (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432"))) ? "64" : "86";
+            if(architecture == null)
+                architecture = (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432"))) ? "64" : "86";
+            
+            if (version == null)
+                version = findLatestNodeVersion();
 
             WebClient client = new WebClient();
 
@@ -32,6 +37,23 @@ namespace node_install_windows
                 client.DownloadFile(url, savePath);
             }
             catch (Exception e) { Console.WriteLine(e.StackTrace); }
+        }
+
+        /* Scrapes http://nodejs.org/dist/latest/ and identifies the version number of the latest stable release */
+        private static string findLatestNodeVersion()
+        {
+            WebRequest req = HttpWebRequest.Create("http://nodejs.org/dist/latest/");
+            req.Method = "GET";
+            string src = "";
+
+            StreamReader reader = new StreamReader(req.GetResponse().GetResponseStream());
+            src = reader.ReadToEnd();
+
+            Regex exp = new Regex(@"node-v(?<version>\d+.\d+.\d+)");
+
+            string result = exp.Match(src).Groups["version"].Value;
+            
+            return result;
         }
     }
 }
